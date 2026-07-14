@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "kesin": ["bahis", "iddaa", "casino", "kazino", "kumar", "rulet", "jackpot", "deneme bonusu", "çevrimsiz bonus", "free spin", "freebet", "canlı bahis"],
+  "genel": ["bonus", "çevrim", "kupon", "oran", "maç kaçmaz", "para yatır", "telegram"],
+  "ignored": ["bahiskalkanı", "bahiskalkani", "bahis kalkanı", "bahis kalkani"]
+}
