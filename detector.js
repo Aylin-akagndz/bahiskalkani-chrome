@@ -23,6 +23,13 @@ function normalizeText(text) {
   }
 
   return result;
+}// ignored listesindeki kelimeleri metinden çıkarır
+function removeIgnored(text, ignoredList) {
+  let result = text;
+  for (const ignored of ignoredList) {
+    result = result.split(ignored).join('');
+  }
+  return result;
 }
 
 // Asıl karar fonksiyonu: bu metin bahis içeriği mi?
