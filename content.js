@@ -55,8 +55,46 @@ function hideNode(textNode) {
     z-index: 9999;
     border-radius: 4px;
   `;
-  overlay.textContent = "🛡️ Bahis içeriği gizlendi";
+  overlay.innerHTML = `
+    <span>🛡️ Bahis içeriği gizlendi</span>
+    <button class="bk-goster" style="
+      margin-left: 8px; padding: 4px 10px; font-size: 12px;
+      background: white; color: black; border: none;
+      border-radius: 4px; cursor: pointer;
+    ">Yine de göster</button>
+  `;
+
+  const tekrarGizleBtn = document.createElement("button");
+  tekrarGizleBtn.textContent = "🛡️";
+  tekrarGizleBtn.title = "Tekrar gizle";
+  tekrarGizleBtn.style.cssText = `
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 24px; height: 24px;
+    font-size: 12px;
+    background: rgba(20,20,20,0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 9998;
+    display: none;
+  `;
+
+  overlay.querySelector(".bk-goster").addEventListener("click", (e) => {
+    e.stopPropagation();
+    overlay.style.display = "none";
+    tekrarGizleBtn.style.display = "block";
+  });
+
+  tekrarGizleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    overlay.style.display = "flex";
+    tekrarGizleBtn.style.display = "none";
+  });
 
   parent.appendChild(overlay);
+  parent.appendChild(tekrarGizleBtn);
 }
+
 scanPage();
