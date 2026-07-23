@@ -3,12 +3,13 @@ async function isSafeDomain() {
   const url = chrome.runtime.getURL('mesru_alanlar.json');
   const response = await fetch(url);
   const data = await response.json();
-const safeDomains = data.alanlar;
+  const safeDomains = data.alanlar;
 
-  const currentHost = window.location.hostname; // örn. "www.ntv.com.tr"
+  const currentHost = window.location.hostname;
 
   return safeDomains.some(domain => currentHost.includes(domain));
 }
+
 // Sayfadaki tüm metin parçalarını gezip bahis içeriğini kapatır
 async function scanPage() {
   const safe = await isSafeDomain();
@@ -18,7 +19,16 @@ async function scanPage() {
 
   const walker = document.createTreeWalker(
     document.body,
-    NodeFilter.SHOW_TEXT
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode(node) {
+        // Kendi eklediğimiz overlay/butonların içindeki metinleri atla
+        if (node.parentElement && node.parentElement.closest('.bk-ignore')) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    }
   );
 
   const matchedNodes = [];
@@ -34,6 +44,7 @@ async function scanPage() {
 
   matchedNodes.forEach(hideNode);
 }
+
 // Bir metin düğümünün en yakın kutusunu (div, p vb.) bulup üstünü kapatır
 function hideNode(textNode) {
   const parent = textNode.parentElement;
@@ -43,6 +54,7 @@ function hideNode(textNode) {
   parent.style.position = "relative";
 
   const overlay = document.createElement("div");
+  overlay.className = "bk-ignore"; // taramadan hariç tutulacak
   overlay.style.cssText = `
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -65,6 +77,7 @@ function hideNode(textNode) {
   `;
 
   const tekrarGizleBtn = document.createElement("button");
+  tekrarGizleBtn.className = "bk-ignore"; // taramadan hariç tutulacak
   tekrarGizleBtn.textContent = "🛡️";
   tekrarGizleBtn.title = "Tekrar gizle";
   tekrarGizleBtn.style.cssText = `
@@ -98,3 +111,13 @@ function hideNode(textNode) {
 }
 
 scanPage();
+
+// Sayfaya yeni içerik eklendiğinde otomatik tekrar tara
+const observer = new MutationObserver(() => {
+  scanPage();
+});
+
+observer.observe(document.body, {
+  childList: true,
+  subtree: true
+});
