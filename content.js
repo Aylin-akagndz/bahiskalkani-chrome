@@ -3,9 +3,9 @@ let sayacKuyrugu = Promise.resolve();
 function sayaciArtir() {
   sayacKuyrugu = sayacKuyrugu.then(() => {
     return new Promise((resolve) => {
-      chrome.storage.local.get(["engellenenSayisi"], (result) => {
+      chrome.storage.session.get(["engellenenSayisi"], (result) => {
         const mevcut = result.engellenenSayisi || 0;
-        chrome.storage.local.set({ engellenenSayisi: mevcut + 1 }, resolve);
+        chrome.storage.session.set({ engellenenSayisi: mevcut + 1 }, resolve);
       });
     });
   });
@@ -22,19 +22,20 @@ async function isSafeDomain() {
   return safeDomains.some(domain => currentHost.includes(domain));
 }
 
-// Sayfadaki tüm metin parçalarını gezip bahis içeriğini kapatır
 async function scanPage() {
   const safe = await isSafeDomain();
-  if (safe) return; // güvenli sitedeyiz, hiç tarama yapma
-
   const keywords = await loadKeywords();
+
+  // Güvenli sitedeysek sadece "kesin" listeyi kullan, "genel"i devre dışı bırak
+  const aktifKeywords = safe
+    ? { ...keywords, genel: [] }
+    : keywords;
 
   const walker = document.createTreeWalker(
     document.body,
     NodeFilter.SHOW_TEXT,
     {
       acceptNode(node) {
-        // Kendi eklediğimiz overlay/butonların içindeki metinleri atla
         if (node.parentElement && node.parentElement.closest('.bk-ignore')) {
           return NodeFilter.FILTER_REJECT;
         }
@@ -49,7 +50,7 @@ async function scanPage() {
     const text = node.nodeValue.trim();
     if (text.length === 0) continue;
 
-    if (isBettingContent(text, keywords)) {
+    if (isBettingContent(text, aktifKeywords)) {
       matchedNodes.push(node);
     }
   }
