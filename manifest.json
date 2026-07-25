@@ -1,5 +1,6 @@
 {
   "manifest_version": 3,
+  "permissions": ["storage"],
   "name": "BahisKalkanı - Chrome Eklentisi",
   "version": "1.0",
   "description": "Bahis içeriğini tespit edip kapatan koruma eklentisi",

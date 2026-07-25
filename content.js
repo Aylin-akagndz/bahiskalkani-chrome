@@ -1,3 +1,15 @@
+let sayacKuyrugu = Promise.resolve();
+
+function sayaciArtir() {
+  sayacKuyrugu = sayacKuyrugu.then(() => {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(["engellenenSayisi"], (result) => {
+        const mevcut = result.engellenenSayisi || 0;
+        chrome.storage.local.set({ engellenenSayisi: mevcut + 1 }, resolve);
+      });
+    });
+  });
+}
 // Şu anki sayfanın domaini güvenli/meşru listede mi kontrol eder
 async function isSafeDomain() {
   const url = chrome.runtime.getURL('mesru_alanlar.json');
@@ -108,6 +120,7 @@ function hideNode(textNode) {
 
   parent.appendChild(overlay);
   parent.appendChild(tekrarGizleBtn);
+  sayaciArtir();
 }
 
 scanPage();
