@@ -32,12 +32,18 @@ function removeIgnored(text, ignoredList) {
   return result;
 }
 
-// Asıl karar fonksiyonu: bu metin bahis içeriği mi?
 function isBettingContent(text, keywords) {
   let cleaned = normalizeText(text);
   cleaned = removeIgnored(cleaned, keywords.ignored);
 
-  const allTerms = [...keywords.kesin, ...keywords.genel];
+  // Kesin ifadeler her zaman engelleme sebebi (muaf bile olsa)
+  const kesinEslesme = keywords.kesin.some(term => cleaned.includes(term));
+  if (kesinEslesme) return true;
 
-  return allTerms.some(term => cleaned.includes(term));
+  // Muaf (haber/uyarı) bağlamı varsa, genel terimler artık sebep sayılmaz
+  const muafVar = (keywords.muaf || []).some(term => cleaned.includes(term));
+  if (muafVar) return false;
+
+  // Muaf değilse, genel terimlere de bak
+  return keywords.genel.some(term => cleaned.includes(term));
 }
