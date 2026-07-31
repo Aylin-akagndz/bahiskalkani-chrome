@@ -22,50 +22,15 @@ async function isSafeDomain() {
   return safeDomains.some(domain => currentHost.includes(domain));
 }
 
-async function scanPage() {
-  const safe = await isSafeDomain();
-  const keywords = await loadKeywords();
-
-  // Güvenli sitedeysek sadece "kesin" listeyi kullan, "genel"i devre dışı bırak
-  const aktifKeywords = safe
-    ? { ...keywords, genel: [] }
-    : keywords;
-
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode(node) {
-        if (node.parentElement && node.parentElement.closest('.bk-ignore')) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        return NodeFilter.FILTER_ACCEPT;
-      }
-    }
-  );
-
-  const matchedNodes = [];
-  let node;
-  while (node = walker.nextNode()) {
-    const text = node.nodeValue.trim();
-    if (text.length === 0) continue;
-
-    if (isBettingContent(text, aktifKeywords)) {
-      matchedNodes.push(node);
-    }
-  }
-
-  matchedNodes.forEach(hideNode);
-}
-
-// Bir metin düğümünün en yakın kutusunu (div, p vb.) bulup üstünü kapatır
-function hideNode(textNode) {
-  const parent = textNode.parentElement;
+function hideNode(parent) {
   if (!parent || parent.dataset.bahiskalkaniKapatildi) return;
+
+  
+  parent.dataset.bahiskalkaniKapatildi = "true";
+ 
 
   parent.dataset.bahiskalkaniKapatildi = "true";
   parent.style.position = "relative";
-
   const overlay = document.createElement("div");
   overlay.className = "bk-ignore"; // taramadan hariç tutulacak
   overlay.style.cssText = `
@@ -124,11 +89,82 @@ function hideNode(textNode) {
   sayaciArtir();
 }
 
+let taramaCalisiyor = false;
+let tekrarTaramaGerekli = false;
+
+async function scanPage() {
+  if (taramaCalisiyor) {
+    // Zaten bir tarama çalışıyor, bitince bir kere daha çalışsın diye işaretle
+    tekrarTaramaGerekli = true;
+    return;
+  }
+  taramaCalisiyor = true;
+
+  try {
+    const safe = await isSafeDomain();
+    const keywords = await loadKeywords();
+
+    const aktifKeywords = safe
+      ? { ...keywords, genel: [] }
+      : keywords;
+const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          const parent = node.parentElement;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+
+          // Kendi eklediğimiz kutuları atla
+          if (parent.closest('.bk-ignore')) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          // Sayfa kodu/stilini (script, style) hiç metin olarak sayma
+          if (parent.closest('script, style, noscript')) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+
+   const matchedContainers = new Set();
+    let node;
+    while (node = walker.nextNode()) {
+      const text = node.nodeValue.trim();
+      if (text.length === 0) continue;
+
+      if (isBettingContent(text, aktifKeywords)) {
+        // Gönderinin tamamını (varsa .post kutusunu) hedefle, sadece
+        // eşleşen küçük metin parçasını değil — aynı gönderi birden
+        // fazla parça eşleşse bile Set sayesinde tek sayılır
+        const container = node.parentElement.closest('.post') || node.parentElement;
+        matchedContainers.add(container);
+      }
+    }
+
+    matchedContainers.forEach(hideNode);
+  } finally {
+    taramaCalisiyor = false;
+    if (tekrarTaramaGerekli) {
+      tekrarTaramaGerekli = false;
+      scanPage(); // beklemede kalan tarama isteği varsa şimdi çalıştır
+    }
+  }
+}
+
 scanPage();
 
-// Sayfaya yeni içerik eklendiğinde otomatik tekrar tara
+let taramaZamanlayici = null;
+function taramaPlanla() {
+  if (taramaZamanlayici) clearTimeout(taramaZamanlayici);
+  taramaZamanlayici = setTimeout(() => {
+    scanPage();
+  }, 150);
+}
+
 const observer = new MutationObserver(() => {
-  scanPage();
+  taramaPlanla();
 });
 
 observer.observe(document.body, {
